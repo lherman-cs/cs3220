@@ -7,6 +7,7 @@ void __attribute__((destructor)) cleanup(void);
 #define ID_BYTES (ID_BITS >> 3)
 #define TABLE_SIZE (1 << ID_BITS)
 
+#include <stdint.h>
 #include <dlfcn.h>
 #include <stdio.h>
 #include <stdlib.h>
