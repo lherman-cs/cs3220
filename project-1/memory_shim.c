@@ -17,12 +17,7 @@ void (*orig_free)(void *ptr) = NULL;
 
 size_t mem_table[TABLE_SIZE] = {0};
 
-// Called when the library is unloaded
 void cleanup(void) {
-  // you would use this function to close any files that were still open
-  // or do any other clean up.
-  printf("cleaning up.\n");
-
   size_t total_bytes = 0;
   uint16_t total_counts = 0;
   for (size_t i = 0; i < TABLE_SIZE; i++) {
@@ -43,7 +38,6 @@ void init(void) {
   if (orig_free == NULL) {
     orig_free = dlsym(RTLD_NEXT, "free");
   }
-  printf("initializing library.\n");
 }
 
 void *malloc(size_t size) {
