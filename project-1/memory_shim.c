@@ -3,31 +3,40 @@
 void __attribute__((constructor)) init(void);
 void __attribute__((destructor)) cleanup(void);
 
-#define ID_BITS 16
-#define ID_BYTES (ID_BITS >> 3)
-#define TABLE_SIZE (1 << ID_BITS)
-
-#include <stdint.h>
 #include <dlfcn.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 
 void *(*orig_malloc)(size_t size) = NULL;
 void (*orig_free)(void *ptr) = NULL;
 
-size_t mem_table[TABLE_SIZE] = {0};
+typedef struct node {
+  struct node *next;
+  void *address;
+  size_t size;
+} node;
+
+node *head = NULL;
+node *tail = NULL;
 
 void cleanup(void) {
   size_t total_bytes = 0;
   uint16_t total_counts = 0;
-  for (size_t i = 0; i < TABLE_SIZE; i++) {
-    if (mem_table[i] == 0) continue;
-
-    printf("LEAK\t%zu\n", mem_table[i]);
-    total_bytes += mem_table[i];
+  for (node *cur = head->next; cur != NULL; cur = cur->next) {
+    printf("LEAK\t%zu\n", cur->size);
+    total_bytes += cur->size;
     total_counts++;
   }
   printf("TOTAL\t%u\t%zu\n", total_counts, total_bytes);
+
+  // clean up
+  node *cur = head;
+  while (cur != NULL) {
+    node *next = cur->next;
+    orig_free(cur);
+    cur = next;
+  }
 }
 
 void init(void) {
@@ -38,24 +47,38 @@ void init(void) {
   if (orig_free == NULL) {
     orig_free = dlsym(RTLD_NEXT, "free");
   }
+
+  // initialize linkedlist with dummy node
+  if (head == NULL) {
+    head = orig_malloc(sizeof(node));
+    tail = head;
+  }
 }
 
 void *malloc(size_t size) {
-  static uint16_t id = 0;
-  void *vm = orig_malloc(ID_BYTES + size);
-  // Embed id info into the memory block
-  *(uint16_t *)vm = id;
-  // Store requested size in the table
-  mem_table[id] = size;
-  id++;
+  void *address = orig_malloc(size);
+  node *next = orig_malloc(sizeof(node));
+  next->address = address;
+  next->next = NULL;
+  next->size = size;
+  tail->next = next;
+  tail = next;
 
-  return (void *)((uint8_t *)vm + ID_BYTES);
+  return address;
 }
 
 void free(void *ptr) {
-  void *actual_ptr = (void *)((uint8_t *)ptr - ID_BYTES);
-  uint16_t id = *((uint16_t *)actual_ptr);
-  mem_table[id] = 0;
+  if (ptr == NULL) return;
 
-  orig_free(actual_ptr);
+  node *prev = head;
+  for (node *cur = head; cur != NULL; cur = cur->next) {
+    if (cur->address == ptr) {
+      prev->next = cur->next;
+      orig_free(cur);
+      break;
+    }
+    prev = cur;
+  }
+
+  orig_free(ptr);
 }

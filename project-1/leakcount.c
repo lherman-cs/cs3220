@@ -1,16 +1,35 @@
-#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
+#include <sys/wait.h>
+#include <unistd.h>
 
-int main() {
-  void *block1 = malloc(8);
-  void *block2 = malloc(8);
-  void *block3 = malloc(8);
+typedef char *string;
 
-  printf("%p\n", block1);
-  printf("%p\n", block2);
-  printf("%p\n", block3);
+extern char **environ;
 
-  long long diff = block3 - block1;
-  printf("%lld\n", diff);
+string join(const string *ar, const char sep) {
+  size_t len = 0;
+  for (const string *str = ar; *str != NULL; str++) {
+    len += strlen(*str) + 1;
+  }
+
+  string joined = malloc(len);
+  char *ptr = joined;
+
+  for (const string *str = ar; *str != NULL; str++) {
+    strcpy(ptr, *str);
+    ptr += strlen(*str);
+    *ptr = sep;
+    ptr++;
+  }
+
+  joined[len] = '\0';
+  return joined;
+}
+
+int main(int argc, char *argv[]) {
+  string cmd = join(argv + 1, ' ');
+  system(cmd);
+  free(cmd);
 }
