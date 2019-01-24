@@ -24,11 +24,11 @@ void cleanup(void) {
   size_t total_bytes = 0;
   uint16_t total_counts = 0;
   for (node *cur = head->next; cur != NULL; cur = cur->next) {
-    printf("LEAK\t%zu\n", cur->size);
+    fprintf(stderr, "LEAK\t%zu\n", cur->size);
     total_bytes += cur->size;
     total_counts++;
   }
-  printf("TOTAL\t%u\t%zu\n", total_counts, total_bytes);
+  fprintf(stderr, "TOTAL\t%u\t%zu\n", total_counts, total_bytes);
 
   // clean up
   node *cur = head;
