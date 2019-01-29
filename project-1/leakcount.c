@@ -30,6 +30,7 @@ string join(const string *ar, const char sep) {
 
 int main(int argc, char *argv[]) {
   string cmd = join(argv + 1, ' ');
+  setenv("LD_PRELOAD", "./memory_shim.so", 1);
   system(cmd);
   free(cmd);
 }
